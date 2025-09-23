@@ -47,7 +47,17 @@ function App() {
 
       const sessionResponse = await fetch('/api/session', { method: 'POST' });
       if (!sessionResponse.ok) {
-        throw new Error('セッションの取得に失敗しました。');
+        let detail = '';
+        try {
+          const err = await sessionResponse.json();
+          console.error('Session API error:', err);
+          detail = err?.error || JSON.stringify(err);
+        } catch {
+          const text = await sessionResponse.text().catch(() => '');
+          console.error('Session API error (non-JSON):', text);
+          detail = text;
+        }
+        throw new Error(`セッションの取得に失敗しました。${detail ? ' 詳細: ' + detail : ''}`);
       }
       const session = await sessionResponse.json();
       const clientSecret = session?.client_secret?.value;

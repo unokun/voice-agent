@@ -21,23 +21,46 @@ const ensureClient = () => {
 
 app.post("/api/session", async (req, res) => {
   try {
-    const client = ensureClient();
-    const model = process.env.OPENAI_REALTIME_MODEL || "gpt-realtime";
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new Error("OPENAI_API_KEY is not set.");
+    }
+
+    const model =
+      process.env.OPENAI_REALTIME_MODEL || "gpt-4o-realtime-preview-2024-12-17";
     const instructions =
       process.env.AGENT_INSTRUCTIONS ||
       "あなたは優しい音声アシスタントです。短く分かりやすく回答してください。";
 
-    const session = await client.realtime.sessions.create({
-      model,
-      voice: "alloy",
-      instructions,
-      modalities: ["text", "audio"],
+    const resp = await fetch("https://api.openai.com/v1/realtime/sessions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "OpenAI-Beta": "realtime=v1",
+      },
+      body: JSON.stringify({
+        model,
+        voice: "alloy",
+        instructions,
+        modalities: ["text", "audio"],
+      }),
     });
 
+    const json = await resp.json();
+
+    if (!resp.ok) {
+      console.error("Realtime session API error:", json);
+      return res
+        .status(resp.status)
+        .json({ error: "セッションの作成に失敗しました。", details: json });
+    }
+
+    // Pass through what the client needs (id/model/client_secret)
     res.json({
-      id: session.id,
-      model: session.model,
-      client_secret: session.client_secret,
+      id: json.id,
+      model: json.model,
+      client_secret: json.client_secret,
     });
   } catch (error) {
     console.error("Failed to create realtime session:", error);
