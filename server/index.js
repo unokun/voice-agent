@@ -44,6 +44,9 @@ app.post("/api/session", async (req, res) => {
         voice: "alloy",
         instructions,
         modalities: ["text", "audio"],
+        input_audio_transcription: {
+          model: "gpt-4o-mini-transcribe",
+        },
       }),
     });
 
